@@ -1,0 +1,123 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-server-config
+data:
+  PORT: "3000"  
+  MONGO_URI: "mongodb://mongo:27017/storybooks"
+  GOOGLE_CLIENT_ID: "87671001915-kjocpgms1dqgs2p8vemaaomcesogmfn4.apps.googleusercontent.com"
+  GOOGLE_CLIENT_SECRET: "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"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-server
+  template:
+    metadata:
+      labels:
+        app: api-server
+    spec:
+      containers:
+        - name: api-server
+          image: abdelrahman700253/book:1.0  
+          command: ["npm", "run", "dev"]
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: api-server-config
+          volumeMounts:
+            - name: app-volume
+              mountPath: /usr/src/app
+            - name: node-modules
+              mountPath: /usr/src/app/node_modules
+      volumes:
+        - name: app-volume
+          persistentVolumeClaim:
+            claimName: app-pvc
+        - name: node-modules
+          emptyDir: {}  
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+        - name: mongo
+          image: mongo:3.6-xenial
+          ports:
+            - containerPort: 27017
+          env:
+            - name: MONGO_INITDB_DATABASE
+              value: storybooks
+          volumeMounts:
+            - name: mongo-data
+              mountPath: /data/db
+      volumes:
+        - name: mongo-data
+          persistentVolumeClaim:
+            claimName: mongo-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-server
+spec:
+  selector:
+    app: api-server
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+  type: NodePort  
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+spec:
+  selector:
+    app: mongo
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017
+  type: ClusterIP  # Only accessible within the cluster
+

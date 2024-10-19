@@ -1,0 +1,24 @@
+<div class="row">
+    <div class="col s12 m8">
+        <h3>{{book.title}}
+            <small>{{{editIcon story.user user book._id false}}}</small>
+        </h3>
+        <div class="card book">
+            <div class="card-content">
+                <span class="card-title">{{formatDate date 'MMMM Do YYYY, h:mm:ss a'}}</span>
+                {{{book.body}}}
+            </div>
+        </div>
+    </div>
+    <div class="col s12 m4">
+        <div class="card center-align">
+            <div class="card-content">
+                <span class="card-title">{{book.user.displayName}}</span>
+                <img src="{{book.user.image}}" class="circle responsive-img img-small">
+            </div>
+            <div class="card-action">
+                <a href="/books/user/{{book.user._id}}">More From {{book.user.firstName}}</a>
+            </div>
+        </div>
+    </div>
+</div>

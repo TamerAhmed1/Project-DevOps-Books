@@ -1,0 +1,85 @@
+pipeline {
+    agent any
+    
+    environment {
+        DOCKER_IMAGE = 'books'
+        GIT_REPO = 'https://github.com/TamerAhmed1/Project-DevOps-Books.git'
+        SCANNER_HOME=tool 'SonarQubeScanner' // Name of your SonarQube server configured in Jenkins
+        RECIPIENT = "ta0346599@gmail.com"
+
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Cloning the repository from GitHub/GitLab
+                git branch: 'master', url: "${env.GIT_REPO}"
+            }
+        }
+
+        stage('Build') {
+            steps {
+                script {
+                    // Build the Docker image
+                    sh 'docker build -t ${DOCKER_IMAGE} .'
+                }
+            }
+        }
+
+        stage("Sonarqube Analysis "){
+            steps{
+                withSonarQubeEnv('SonarQubeScanner') {
+                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=story \
+                    -Dsonar.java.binaries=. \
+                    -Dsonar.projectKey=story 
+                    
+                    '''
+                    
+                }
+            }
+        }
+        stage("TRIVY"){
+            steps{
+                sh " trivy image ${DOCKER_IMAGE}"
+            }
+        }
+
+
+       
+    }
+
+    post {
+        success {
+            emailext (
+                subject: "Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' Succeeded",
+                body: """
+                <p>Good news!</p>
+                <p>The job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' succeeded.</p>
+                <p>Check the details <a href="${env.BUILD_URL}">here</a>.</p>
+                """,
+                recipientProviders: [[$class: 'DevelopersRecipientProvider'], [$class: 'RequesterRecipientProvider']],
+                to: "${RECIPIENT}"
+            )
+        }
+        failure {
+            emailext (
+                subject: "Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' Failed",
+                body: """
+                <p>Unfortunately, the job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' failed.</p>
+                <p>Please check the logs <a href="${env.BUILD_URL}">here</a>.</p>
+                """,
+                to: "${RECIPIENT}"
+            )
+        }
+        always {
+            emailext (
+                subject: "Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' Completed",
+                body: """
+                <p>The job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' has completed.</p>
+                <p>Check the result <a href="${env.BUILD_URL}">here</a>.</p>
+                """,
+                to: "${RECIPIENT}"
+            )
+        }
+    }
+}

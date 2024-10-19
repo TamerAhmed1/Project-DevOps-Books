@@ -1,0 +1,56 @@
+---
+- name: Install Git, Docker, and Jenkins on Amazon Linux 2023
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update dnf repository and cache
+      dnf:
+        update_cache: yes
+
+    - name: Install Git
+      dnf:
+        name: git
+        state: present
+
+    - name: Install Docker
+      dnf:
+        name: docker
+        state: present
+        update_cache: yes
+
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        enabled: yes
+        state: started
+
+    - name: Add user to Docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+    - name: Install Amazon Corretto 11 (Java)
+      dnf:
+        name: java-11-amazon-corretto
+        state: present
+
+    - name: Add Jenkins repo key
+      rpm_key:
+        key: https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+
+    - name: Add Jenkins repository
+      shell: |
+        wget -O /etc/yum.repos.d/jenkins.repo http://pkg.jenkins.io/redhat-stable/jenkins.repo
+        rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+
+    - name: Install Jenkins
+      dnf:
+        name: jenkins
+        state: present
+
+    - name: Start and enable Jenkins service
+      systemd:
+        name: jenkins
+        enabled: yes
+        state: started
